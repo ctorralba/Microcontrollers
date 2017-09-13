@@ -1,0 +1,349 @@
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE TICTACTOE
+OBJECT MODULE PLACED IN TicTacToe.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE TicTacToe.c OPTIMIZE(8,SPEED) DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          
+   2          /*Christopher Torralba
+   3            Jason Tracy
+   4            Josh Zygmunt          */
+   5          
+   6            #include "REG932.h"
+   7          //  #include <ctime>
+   8            #include <stdlib.h>
+   9          //errors if you include <time.h>
+  10          /*
+  11            #include "uart.c"
+  12            #include "uart.h"
+  13          */
+  14          
+  15            //P0 = 0xFF;
+  16            sbit upleftLED = P2^4;
+  17            sbit upmidLED = P0^5;
+  18            sbit uprightLED = P2^7;
+  19            sbit midleftLED = P0^6;
+  20            sbit midmidLED = P1^6;
+  21            sbit midrightLED = P0^4;
+  22            sbit downleftLED =  P2^5;
+  23            sbit downmidLED = P0^7;
+  24            sbit downrightLED = P2^6;
+  25          
+  26            sbit upleftINPUT = P2^0;
+  27            sbit upmidINPUT = P0^1;
+  28            sbit uprightINPUT = P2^3;
+  29            sbit midleftINPUT = P0^2;
+  30            sbit midmidINPUT = P1^4;
+  31            sbit midrightINPUT = P0^0;
+  32            sbit downleftINPUT = P2^1;
+  33            sbit downmidINPUT = P0^3;
+  34            sbit downrightINPUT = P2^2;
+  35            
+  36            void Delay()
+  37            {
+  38   1          unsigned char i, j;
+  39   1        for (i = 0; i < 250; i++)
+  40   1        {
+  41   2          for (j = 0; j < 120; j++);
+  42   2        }
+  43   1        }
+  44            
+  45            bit GetInput(char Grid[3][3])
+  46            {
+  47   1          bit ans = 1;
+  48   1        if(upleftINPUT == 0 && Grid[0][0] == 2) //you need to check if the slot is open
+  49   1        {
+  50   2          upleftLED = 0;
+  51   2          Grid[0][0] = 0;
+  52   2        }
+  53   1        else if(upmidINPUT == 0 && Grid[0][1] == 2)
+  54   1        {
+  55   2          upmidLED = 0;
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 2   
+
+  56   2          Grid[0][1] = 0;
+  57   2        }
+  58   1        else if(uprightINPUT == 0 && Grid[0][2] == 2)
+  59   1        {
+  60   2          uprightLED = 0;
+  61   2          Grid[0][2] = 0;
+  62   2        }
+  63   1        else if(midleftINPUT == 0 && Grid[1][0] == 2)
+  64   1        {
+  65   2          midleftLED = 0;
+  66   2          Grid[1][0] = 0;
+  67   2        }
+  68   1        else if(midmidINPUT == 0 && Grid[1][1] == 2)
+  69   1        {
+  70   2          midmidLED = 0;
+  71   2          Grid[1][1] = 0;
+  72   2        }
+  73   1        else if(midrightINPUT == 0 && Grid[1][2] == 2)
+  74   1        {
+  75   2          midrightLED = 0;
+  76   2          Grid[1][2] = 0;
+  77   2        }
+  78   1        else if(downleftINPUT == 0 && Grid[2][0] == 2)
+  79   1        {
+  80   2          downleftLED = 0;
+  81   2          Grid[2][0] = 0;
+  82   2        }
+  83   1        else if(downmidINPUT == 0 && Grid[2][1] == 2)
+  84   1        {
+  85   2          downmidLED = 0;
+  86   2          Grid[2][1] = 0;
+  87   2        }
+  88   1        else if(downrightINPUT == 0 && Grid[2][2] == 2)
+  89   1        {
+  90   2          downrightLED = 0;
+  91   2          Grid[2][2] = 0;
+  92   2        }
+  93   1        else
+  94   1          ans = 0;
+  95   1        return ans;
+  96   1        }
+  97           
+  98          
+  99           void Flash(char Grid[3][3])//not complete needs delay
+ 100           {
+ 101   1        if(Grid[0][0] == 1)
+ 102   1          upleftLED = 1;
+ 103   1        if(Grid[0][1] == 1)
+ 104   1          upmidLED = 1;
+ 105   1        if(Grid[0][2] == 1)
+ 106   1          uprightLED = 1;
+ 107   1        if(Grid[1][0] == 1)
+ 108   1          midleftLED = 1;
+ 109   1        if(Grid[1][1] == 1)
+ 110   1          midmidLED = 1;
+ 111   1        if(Grid[1][2] == 1)
+ 112   1          midrightLED = 1;
+ 113   1        if(Grid[2][0] == 1)
+ 114   1          downleftLED = 1;
+ 115   1        if(Grid[2][1] == 1)
+ 116   1          downmidLED = 1;
+ 117   1        if(Grid[2][2] == 1)
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 3   
+
+ 118   1          downrightLED = 1;
+ 119   1        //delay
+ 120   1        Delay();
+ 121   1        
+ 122   1        if(Grid[0][0] == 1)
+ 123   1          upleftLED = 0;
+ 124   1        if(Grid[0][1] == 1)
+ 125   1          upmidLED = 0;
+ 126   1        if(Grid[0][2] == 1)
+ 127   1          uprightLED = 0;
+ 128   1        if(Grid[1][0] == 1)
+ 129   1          midleftLED = 0;
+ 130   1        if(Grid[1][1] == 1)
+ 131   1          midmidLED = 0;
+ 132   1        if(Grid[1][2] == 1)
+ 133   1          midrightLED = 0;
+ 134   1        if(Grid[2][0] == 1)
+ 135   1          downleftLED = 0;
+ 136   1        if(Grid[2][1] == 1)
+ 137   1          downmidLED = 0;
+ 138   1        if(Grid[2][2] == 1)
+ 139   1          downrightLED = 0;
+ 140   1        Delay();
+ 141   1       }
+ 142           
+ 143           bit endCondition (char Grid[3][3])
+ 144          {
+ 145   1        if ((Grid[0][0] == 0 && Grid[0][1] == 0 && Grid[0][2] == 0) ||
+ 146   1           (Grid[1][0] == 0 && Grid[1][1] == 0 && Grid[1][2] == 0) ||
+ 147   1           (Grid[2][0] == 0 && Grid[2][1] == 0 && Grid[2][2] == 0) ||
+ 148   1           (Grid[0][0] == 0 && Grid[1][0] == 0 && Grid[2][0] == 0) ||
+ 149   1           (Grid[0][1] == 0 && Grid[1][1] == 0 && Grid[2][1] == 0) ||
+ 150   1           (Grid[0][2] == 0 && Grid[1][2] == 0 && Grid[2][2] == 0) ||
+ 151   1           (Grid[0][0] == 0 && Grid[1][1] == 0 && Grid[2][2] == 0) ||
+ 152   1           (Grid[0][2] == 0 && Grid[1][1] == 0 && Grid[2][0] == 0))
+ 153   1            return 1; //player won
+ 154   1        else if ((Grid[0][0] == 1 && Grid[0][1] == 1 && Grid[0][2] == 1) ||
+ 155   1           (Grid[1][0] == 1 && Grid[1][1] == 1 && Grid[1][2] == 1) ||
+ 156   1           (Grid[2][0] == 1 && Grid[2][1] == 1 && Grid[2][2] == 1) ||
+ 157   1           (Grid[0][0] == 1 && Grid[1][0] == 1 && Grid[2][0] == 1) ||
+ 158   1           (Grid[0][1] == 1 && Grid[1][1] == 1 && Grid[2][1] == 1) ||
+ 159   1           (Grid[0][2] == 1 && Grid[1][2] == 1 && Grid[2][2] == 1) ||
+ 160   1           (Grid[0][0] == 1 && Grid[1][1] == 1 && Grid[2][2] == 1) ||
+ 161   1           (Grid[0][2] == 1 && Grid[1][1] == 1 && Grid[2][0] == 1))
+ 162   1           return 2; //ai won
+ 163   1        else if (Grid[0][0] != 2 && Grid[0][1] != 2 && Grid[0][2] != 2 &&
+ 164   1             Grid[1][0] != 2 && Grid[1][1] != 2 && Grid[1][2] != 2 &&
+ 165   1             Grid[2][0] != 2 && Grid[2][1] != 2 && Grid[2][2] != 2)
+ 166   1            return 3; //tie
+ 167   1          else
+ 168   1            return 0;
+ 169   1      }
+ 170          void TickTackToeHard(char Grid[3][3], char InputGrid[3][3], char OutputGrid[3][3]) //in this function 0 re
+             -presents players 0's
+ 171          {               //1's represents the ai's X's and 2's are empty spaces    
+ 172   1         char i;
+ 173   1         char j;
+ 174   1         char move_num = 0;
+ 175   1         for(i = 0; i < 3; i++)
+ 176   1         {
+ 177   2        for(j = 0; j < 3; j++)
+ 178   2        Grid[i][j] = 2;
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 4   
+
+ 179   2         }
+ 180   1         while(!GetInput(Grid));
+ 181   1         if(Grid[1][1] == 2)
+ 182   1           Grid[1][1] = 1;
+ 183   1         else
+ 184   1           Grid[0][0] = 1;
+ 185   1         while(!GetInput(Grid))
+ 186   1         {
+ 187   2           Flash(Grid);
+ 188   2         }
+ 189   1         //while(move_num < 8)
+ 190   1         //{
+ 191   1        //ai’s move insert here/ai’s win condition
+ 192   1          //while(!GetInput(Grid))
+ 193   1          //{
+ 194   1            //Flash(Grid);
+ 195   1          //}
+ 196   1          //move_num = move_num + 2; //account for player’s and ai’s move
+ 197   1                //check for win condition insert here
+ 198   1         //}
+ 199   1      } 
+*** WARNING C280 IN LINE 170 OF TicTacToe.c: 'InputGrid': unreferenced local variable
+*** WARNING C280 IN LINE 170 OF TicTacToe.c: 'OutputGrid': unreferenced local variable
+ 200          
+ 201          void TickTackToeEasy(char Grid[3][3], char InputGrid[3][3], char OutputGrid[3][3])
+ 202          {
+ 203   1       /*char x = rand() % 3; //pseudo random number between 0-2
+ 204   1       char y = rand() % 3; 
+ 205   1       char i;
+ 206   1       char j;
+ 207   1       char move_num = 0;
+ 208   1       bit validRandom = 0;
+ 209   1       bit winCondition = 0;
+ 210   1       for(i = 0; i < 3; i++)
+ 211   1       {
+ 212   1         for(j = 0; j < 3; j++)
+ 213   1         Grid[i][j] = 2;
+ 214   1       }
+ 215   1       while (!GetInput(Grid));
+ 216   1       while(!winCondition) //while no one wins
+ 217   1       {
+ 218   1         while (validRandom)
+ 219   1         {
+ 220   1           if (Grid[y][x] == 2)
+ 221   1           {
+ 222   1             Grid[y][x] = 1;
+ 223   1             validRandom = 0;
+ 224   1           }
+ 225   1           else
+ 226   1           {
+ 227   1             x = rand() % 3;
+ 228   1             y = rand() % 3;
+ 229   1           }
+ 230   1         }
+ 231   1         while(!GetInput(Grid))
+ 232   1         {
+ 233   1           Flash(Grid);
+ 234   1         }
+ 235   1         validRandom = 1;
+ 236   1         winCondition = 0;
+ 237   1       }*/
+ 238   1       bit aiX, aiY;
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 5   
+
+ 239   1       bit validRandom = 1;
+ 240   1       while(endCondition(Grid) == 0)
+ 241   1       {
+ 242   2         while(!GetInput(Grid));
+ 243   2         if (!endCondition(Grid)) //if the player didn't win with his move, ai moves
+ 244   2         {
+ 245   3           aiX = rand()%3;
+ 246   3           aiX = rand()%3;
+ 247   3           while (validRandom)
+ 248   3           {
+ 249   4             if (Grid[aiY][aiX] == 2)
+ 250   4             {
+ 251   5               Grid[aiY][aiX] = 1;
+ 252   5               validRandom = 0;
+ 253   5             }
+ 254   4             else
+ 255   4             {
+ 256   5               aiY = rand()%3;
+ 257   5               aiX = rand()%3;
+ 258   5             }
+ 259   4           }
+ 260   3           validRandom = 1;
+ 261   3         }
+ 262   2       }
+ 263   1       if (endCondition(Grid) == 1)
+ 264   1       {
+ 265   2         //player wins
+ 266   2       }
+ 267   1       else if (endCondition(Grid) == 2)
+ 268   1       {
+ 269   2         //ai wins
+ 270   2       }
+ 271   1       else
+ 272   1       {
+ 273   2         //tie
+ 274   2       }
+ 275   1      }
+*** WARNING C280 IN LINE 201 OF TicTacToe.c: 'InputGrid': unreferenced local variable
+*** WARNING C280 IN LINE 201 OF TicTacToe.c: 'OutputGrid': unreferenced local variable
+ 276          void main (void)
+ 277          {
+ 278   1        char Grid[3][3]; ///y x
+ 279   1        char InputGrid[3][3];
+ 280   1        char OutputGrid[3][3];
+ 281   1        int i;
+ 282   1        int j;
+ 283   1        P2M1 = 0x00;
+ 284   1        P1M1 = 0x00;
+ 285   1        P0M1 = 0x00;
+ 286   1      
+ 287   1        for(i = 0; i < 3; i++)
+ 288   1        {
+ 289   2          for(j = 0; j < 3; j++)
+ 290   2        {
+ 291   3          OutputGrid[i][j] = 1;
+ 292   3          InputGrid[i][j] = 1;
+ 293   3        }
+ 294   2        }
+ 295   1        
+ 296   1        while(1)
+ 297   1        {
+ 298   2          //add input method to add different modes
+C51 COMPILER V9.54   TICTACTOE                                                             05/06/2016 00:09:36 PAGE 6   
+
+ 299   2          //TickTackToeHard(Grid, InputGrid, OutputGrid);
+ 300   2        TickTackToeEasy(Grid, InputGrid, OutputGrid);
+ 301   2          for(i = 0; i < 3; i++)
+ 302   2          {
+ 303   3            for(j = 0; j < 3; j++)
+ 304   3            OutputGrid[i][j] = 1;
+ 305   3          }
+ 306   2        }
+ 307   1      }
+ 308          
+ 309          
+ 310          
+ 311          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1292    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      50
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       4
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  4 WARNING(S),  0 ERROR(S)

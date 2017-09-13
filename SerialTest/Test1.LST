@@ -1,0 +1,12 @@
+C51 COMPILER V6.02  TEST1                                                                  05/05/2016 16:48:34 PAGE 1   
+
+
+C51 COMPILER V6.02, COMPILATION OF MODULE TEST1
+OBJECT MODULE PLACED IN .\Test1.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE .\Test1.c DEBUG OBJECTEXTEND
+
+stmt level    source
+
+*** ERROR 318 OF .\Test1.c: can't open file '.\Test1.c'
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)

@@ -1,0 +1,1105 @@
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 1   
+
+
+C51 COMPILER V6.02, COMPILATION OF MODULE TICTACTOE
+OBJECT MODULE PLACED IN .\TicTacToe.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE .\TicTacToe.c DEBUG OBJECTEXTEND
+
+stmt level    source
+
+   1          
+   2          /*Christopher Torralba
+   3            Jason Tracy
+   4            Josh Zygmunt            */
+   5          
+   6            #include "REG932.h"
+   7            #include <stdlib.h>
+   8            #include "uart.h"
+   9          
+  10            sbit upleftLED = P2^4;
+  11            sbit upmidLED = P0^5;
+  12            sbit uprightLED = P2^7;
+  13            sbit midleftLED = P0^6;
+  14            sbit midmidLED = P1^6;
+  15            sbit midrightLED = P0^4;
+  16            sbit downleftLED =  P2^5;
+  17            sbit downmidLED = P0^7;
+  18            sbit downrightLED = P2^6;
+  19          
+  20            sbit upleftINPUT = P2^0;
+  21            sbit upmidINPUT = P0^1;
+  22            sbit uprightINPUT = P2^3;
+  23            sbit midleftINPUT = P0^2;
+  24            sbit midmidINPUT = P1^4;
+  25            sbit midrightINPUT = P0^0;
+  26            sbit downleftINPUT = P2^1;
+  27            sbit downmidINPUT = P0^3;
+  28            sbit downrightINPUT = P2^2;
+  29          
+  30            sbit Chip_enable = P1^3;
+  31          
+  32            sbit sound = P1^7;
+  33            char highPreload;
+  34            char lowPreload;
+  35            /*In our 3x3 Grid for tic-tac-toe we use 0’s to represent the player’s movements,
+  36          	 1’s to represent the AI’s movements, and 2’s to represent empty spaces.
+  37             Our tic-tac-toe board is represented as a 2-D Array [0][0], [0][1], [0][2]
+  38          																											 [1][0], [1][1]. [1][2]
+  39          																											 [2][0], [2][1], [2][2]
+  40            */
+  41          
+  42            void set()  //used in timed tic-tac-toe mode for calculating the time needed before the AI goes instead 
+             -of the player
+  43            {
+  44   1          TF0 = 0;
+  45   1          TR0 = 0;
+  46   1          TMOD = 1;
+  47   1          TL0 = 0xFF;
+  48   1          TH0 = 0x6F;
+  49   1          TR0 = 1;
+  50   1        }
+  51          
+  52            void GoRand(char Grid[3][3], const char c) // this is used in all of the ai functionality for an AI to p
+             -lace randomly
+  53            {
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 2   
+
+  54   1          char x = 0;
+  55   1          char y = 0;
+  56   1          while(Grid[y][x] != 2) //checks if the random variable between 0-2 is empty
+  57   1          {
+  58   2            x = rand() % 3; //random variable between 0-2
+  59   2            y = rand() % 3;
+  60   2          }
+  61   1          Grid[y][x] = c; //write whether a player or an ai used this
+  62   1        }  
+  63          
+  64            void Delay()  //used for the delay between the flashing LED’s for the AI’s representation
+  65            {
+  66   1          char i = 0;
+  67   1          while(i <= 50) //iterate this 50 times
+  68   1          {
+  69   2            TF0 = 0;
+  70   2            TR0 = 0;
+  71   2            TMOD = 1;
+  72   2            TL0 = 0x99;
+  73   2            TH0 = 0xF1;   //.001*50=.05
+  74   2            TR0 = 1;
+  75   2            while(TF0 == 0);
+  76   2            i++;
+  77   2          }
+  78   1        }
+  79           
+  80           
+  81            bit GetInput(char Grid[3][3]) // function is used for the player to input a valid spot
+  82            {
+  83   1          bit ans = 1;
+  84   1          if(upleftINPUT == 0 && Grid[0][0] == 2) //you need to check if the slot is open
+  85   1          {
+  86   2            upleftLED = 0; //lights up the LED according to the player’s input
+  87   2            Grid[0][0] = 0; //used to represent our tic-tac-toe board.
+  88   2          }
+  89   1          else if(upmidINPUT == 0 && Grid[0][1] == 2)
+  90   1          {
+  91   2            upmidLED = 0;
+  92   2            Grid[0][1] = 0;
+  93   2          }
+  94   1          else if(uprightINPUT == 0 && Grid[0][2] == 2)
+  95   1          {
+  96   2            uprightLED = 0;
+  97   2            Grid[0][2] = 0;
+  98   2          }
+  99   1          else if(midleftINPUT == 0 && Grid[1][0] == 2)
+ 100   1          {
+ 101   2            midleftLED = 0;
+ 102   2            Grid[1][0] = 0;
+ 103   2          }
+ 104   1          else if(midmidINPUT == 0 && Grid[1][1] == 2)
+ 105   1          {
+ 106   2            midmidLED = 0;
+ 107   2            Grid[1][1] = 0;
+ 108   2          }
+ 109   1          else if(midrightINPUT == 0 && Grid[1][2] == 2)
+ 110   1          {
+ 111   2            midrightLED = 0;
+ 112   2            Grid[1][2] = 0;
+ 113   2          }
+ 114   1          else if(downleftINPUT == 0 && Grid[2][0] == 2)
+ 115   1          {
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 3   
+
+ 116   2            downleftLED = 0;
+ 117   2            Grid[2][0] = 0;
+ 118   2          }
+ 119   1          else if(downmidINPUT == 0 && Grid[2][1] == 2)
+ 120   1          {
+ 121   2            downmidLED = 0;
+ 122   2            Grid[2][1] = 0;
+ 123   2          }
+ 124   1          else if(downrightINPUT == 0 && Grid[2][2] == 2)
+ 125   1          {
+ 126   2            downrightLED = 0;
+ 127   2            Grid[2][2] = 0;
+ 128   2          }
+ 129   1          else
+ 130   1            ans = 0;
+ 131   1          return ans;
+ 132   1        }
+ 133          
+ 134            bit Get2PlayerInput(char Grid[3][3]) //this is used to get the second player input for the 2-player mode
+ 135            {
+ 136   1          bit ans = 1;
+ 137   1          if(upleftINPUT == 0 && Grid[0][0] == 2)
+ 138   1            Grid[0][0] = 1; //this is usually represented as AI
+ 139   1          else if(upmidINPUT == 0 && Grid[0][1] == 2)
+ 140   1            Grid[0][1] = 1;
+ 141   1          else if(uprightINPUT == 0 && Grid[0][2] == 2)
+ 142   1            Grid[0][2] = 1;
+ 143   1          else if(midleftINPUT == 0 && Grid[1][0] == 2)
+ 144   1            Grid[1][0] = 1;
+ 145   1          else if(midmidINPUT == 0 && Grid[1][1] == 2)
+ 146   1            Grid[1][1] = 1;
+ 147   1          else if(midrightINPUT == 0 && Grid[1][2] == 2)
+ 148   1            Grid[1][2] = 1;
+ 149   1          else if(downleftINPUT == 0 && Grid[2][0] == 2)
+ 150   1            Grid[2][0] = 1;
+ 151   1          else if(downmidINPUT == 0 && Grid[2][1] == 2)
+ 152   1            Grid[2][1] = 1;
+ 153   1          else if(downrightINPUT == 0 && Grid[2][2] == 2)
+ 154   1            Grid[2][2] = 1;
+ 155   1          else
+ 156   1            ans = 0;
+ 157   1          return ans;
+ 158   1        }
+ 159          
+ 160          bit setup(char Grid[3][3])//this was used for the hard AI mode & hard timed mode
+ 161          {//this function specifically looks for a row/column that has 2 empty spaces and one AI move so that next 
+             -turn if the player doesn't block it the AI will win if there is no possible setup returns 0
+ 162   1        char AiMoves;  //counts number of ai moves in a row               
+ 163   1        char empty; //counters number of empty spaces
+ 164   1        char x, y; //these are one of the emptyspace’s cordinates
+ 165   1        char i, j; //iterators used for loops
+ 166   1        //uart_transmit('A');
+ 167   1        for(i = 0; i < 3; i++) //check all across
+ 168   1        {
+ 169   2          AiMoves = 0;
+ 170   2          empty = 0;
+ 171   2          for(j = 0; j < 3; j++)
+ 172   2          {
+ 173   3            if(Grid[i][j] == 2)
+ 174   3            {
+ 175   4              empty++;
+ 176   4              x = j;
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 4   
+
+ 177   4              y = i;
+ 178   4            }
+ 179   3            else if(Grid[i][j] == 1)
+ 180   3              AiMoves++;
+ 181   3          }
+ 182   2          if(AiMoves == 1 && empty == 2)
+ 183   2          {
+ 184   3            Grid[y][x] = 1;
+ 185   3            return 1;
+ 186   3          }
+ 187   2        }
+ 188   1      
+ 189   1        for(j = 0; j < 3; j++) //check all down
+ 190   1        {
+ 191   2          AiMoves = 0;
+ 192   2          empty = 0;
+ 193   2          for(i = 0; i < 3; i++)
+ 194   2          {
+ 195   3            if(Grid[i][j] == 2)
+ 196   3            {
+ 197   4              empty++;
+ 198   4              x = j;
+ 199   4              y = i;
+ 200   4            }
+ 201   3            else if(Grid[i][j] == 1)
+ 202   3              AiMoves++;
+ 203   3          }
+ 204   2          if(AiMoves == 1 && empty == 2)
+ 205   2          {
+ 206   3            Grid[y][x] = 1;
+ 207   3            return 1;
+ 208   3          }
+ 209   2        }
+ 210   1      
+ 211   1        AiMoves = 0;
+ 212   1        empty = 0;
+ 213   1        for(j = 0, i = 0; j < 3; j++, i++)//checking diagonally
+ 214   1        {
+ 215   2          if(Grid[i][j] == 2)
+ 216   2            {
+ 217   3              empty++;
+ 218   3              x = j;
+ 219   3              y = i;
+ 220   3            }
+ 221   2            else if(Grid[i][j] == 1)
+ 222   2              AiMoves++;
+ 223   2        }
+ 224   1      
+ 225   1        if(AiMoves == 1 && empty == 2)
+ 226   1        {
+ 227   2            Grid[y][x] = 1;
+ 228   2            return 1;
+ 229   2        }
+ 230   1      
+ 231   1        AiMoves = 0;
+ 232   1        empty = 0;
+ 233   1        for(j = 2, i = 0; j >= 0; j--, i++)//checking diagonally
+ 234   1        {
+ 235   2          if(Grid[i][j] == 2)
+ 236   2            {
+ 237   3              empty++;
+ 238   3              x = j;
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 5   
+
+ 239   3              y = i;
+ 240   3            }
+ 241   2            else if(Grid[i][j] == 1)
+ 242   2              AiMoves++;
+ 243   2        }
+ 244   1        if(AiMoves == 1 && empty == 2)
+ 245   1        {
+ 246   2            uart_transmit('b');
+ 247   2            Grid[y][x] = 1;
+ 248   2            return 1;
+ 249   2        }
+ 250   1        //uart_transmit('B');
+ 251   1        return 0;
+ 252   1      }
+ 253          
+ 254          bit winingmove(char Grid[3][3])  /* used in hard ai mode and hard ai timed mode, checks to see if there is
+             - a winning move and if there is takes it, if there isn’t returns a 0*/
+ 255          {                                         
+ 256   1        char AiMoves; //number of ai moves in a row or column                 
+ 257   1        char empty; //number of empty spaces in a row or column
+ 258   1        char x, y; //stores the coordinate of a empty spot on the grid
+ 259   1        char i, j; //iterators used in loops
+ 260   1        //uart_transmit('C');
+ 261   1        for(i = 0; i < 3; i++) //check all across
+ 262   1        {
+ 263   2          AiMoves = 0;
+ 264   2          empty = 0;
+ 265   2          for(j = 0; j < 3; j++)
+ 266   2          {
+ 267   3            if(Grid[i][j] == 2)
+ 268   3            {
+ 269   4              empty++;
+ 270   4              x = j;
+ 271   4              y = i;
+ 272   4            }
+ 273   3            else if(Grid[i][j] == 1)
+ 274   3              AiMoves++;
+ 275   3          }
+ 276   2          if(AiMoves == 2 && empty == 1)
+ 277   2          {
+ 278   3            Grid[y][x] = 1;
+ 279   3            return 1;
+ 280   3          }
+ 281   2        }
+ 282   1      
+ 283   1        for(j = 0; j < 3; j++) //check all down
+ 284   1        {
+ 285   2          AiMoves = 0;
+ 286   2          empty = 0;
+ 287   2          for(i = 0; i < 3; i++)
+ 288   2          {
+ 289   3            if(Grid[i][j] == 2)
+ 290   3            {
+ 291   4              empty++;
+ 292   4              x = j;
+ 293   4              y = i;
+ 294   4            }
+ 295   3            else if(Grid[i][j] == 1)
+ 296   3              AiMoves++;
+ 297   3          }
+ 298   2          if(AiMoves == 2 && empty == 1)
+ 299   2          {
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 6   
+
+ 300   3            Grid[y][x] = 1;
+ 301   3            return 1;
+ 302   3          }
+ 303   2        }
+ 304   1      
+ 305   1        AiMoves = 0;
+ 306   1        empty = 0;
+ 307   1        for(j = 0, i = 0; j < 3; j++, i++) //checks diagonally
+ 308   1        {
+ 309   2          if(Grid[i][j] == 2)
+ 310   2            {
+ 311   3              empty++;
+ 312   3              x = j;
+ 313   3              y = i;
+ 314   3            }
+ 315   2            else if(Grid[i][j] == 1)
+ 316   2              AiMoves++;
+ 317   2        }
+ 318   1      
+ 319   1        if(AiMoves == 2 && empty == 1)
+ 320   1        {
+ 321   2            Grid[y][x] = 1;
+ 322   2            return 1;
+ 323   2        }
+ 324   1      
+ 325   1        AiMoves = 0;
+ 326   1        empty = 0;
+ 327   1        for(j = 2, i = 0; j >= 0; j--, i++) //checks diagonally
+ 328   1        {
+ 329   2          if(Grid[i][j] == 2)
+ 330   2            {
+ 331   3              empty++;
+ 332   3              x = j;
+ 333   3              y = i;
+ 334   3            }
+ 335   2            else if(Grid[i][j] == 1)
+ 336   2              AiMoves++;
+ 337   2        }
+ 338   1        if(AiMoves == 2 && empty == 1)
+ 339   1        {
+ 340   2            Grid[y][x] = 1;
+ 341   2            return 1;
+ 342   2        }
+ 343   1        //uart_transmit('D');
+ 344   1        return 0;
+ 345   1      }
+ 346          
+ 347          bit Defend(char Grid[3][3]) //checks if the human player is about to win
+ 348          {                                         //if they are the ai blocks it
+ 349   1                                                //returns 1 if the move is blocked 0 if there is no “obvious” bl
+             -ock
+ 350   1        char playerM; //number of player moves in a row or column
+ 351   1        char empty; //number of empty spots in a row or column
+ 352   1        char x, y; //x and y coordinate of the empty space is a row or column
+ 353   1        char i, j; //iterators used in loops
+ 354   1        //uart_transmit('E');
+ 355   1        for(i = 0; i < 3; i++) //check all across
+ 356   1        {
+ 357   2          playerM = 0;
+ 358   2          empty = 0;
+ 359   2          for(j = 0; j < 3; j++)
+ 360   2          {
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 7   
+
+ 361   3              if(Grid[i][j] == 2)
+ 362   3              {
+ 363   4              empty++;
+ 364   4              x = j;
+ 365   4              y = i;
+ 366   4              }
+ 367   3              else if(Grid[i][j] == 0)
+ 368   3              playerM++;
+ 369   3          }
+ 370   2          if(playerM == 2 && empty == 1)
+ 371   2          {
+ 372   3              Grid[y][x] = 1;
+ 373   3              return 1;
+ 374   3          }
+ 375   2          
+ 376   2        }
+ 377   1       
+ 378   1        for(j = 0; j < 3; j++) //check all down
+ 379   1        {
+ 380   2          playerM = 0;
+ 381   2          empty = 0;
+ 382   2          for(i = 0; i < 3; i++)
+ 383   2          {
+ 384   3            if(Grid[i][j] == 2)
+ 385   3            {
+ 386   4              empty++;
+ 387   4              x = j;
+ 388   4              y = i;
+ 389   4            }
+ 390   3            else if(Grid[i][j] == 0)
+ 391   3              playerM++;
+ 392   3          }
+ 393   2          if(playerM == 2 && empty == 1)
+ 394   2          {
+ 395   3            Grid[y][x] = 1;
+ 396   3            return 1;
+ 397   3          }
+ 398   2        }
+ 399   1       
+ 400   1        playerM = 0;
+ 401   1        empty = 0;
+ 402   1        for(j = 0, i = 0; j < 3; j++, i++) //checking diagonally
+ 403   1        {
+ 404   2          if(Grid[i][j] == 2)
+ 405   2            {
+ 406   3              empty++;
+ 407   3              x = j;
+ 408   3              y = i;
+ 409   3            }
+ 410   2            else if(Grid[i][j] == 0)
+ 411   2              playerM++;
+ 412   2        }
+ 413   1       
+ 414   1        if(playerM == 2 && empty == 1)
+ 415   1        {
+ 416   2            Grid[y][x] = 1;
+ 417   2            return 1;
+ 418   2        }
+ 419   1       
+ 420   1        playerM = 0;
+ 421   1        empty = 0;
+ 422   1        for(j = 2, i = 0; j >= 0; j--, i++)//checking diagonally
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 8   
+
+ 423   1        {
+ 424   2          if(Grid[i][j] == 2)
+ 425   2            {
+ 426   3              empty++;
+ 427   3              x = j;
+ 428   3              y = i;
+ 429   3            }
+ 430   2            else if(Grid[i][j] == 0)
+ 431   2              playerM++;
+ 432   2        }
+ 433   1       
+ 434   1        if(playerM == 2 && empty == 1)
+ 435   1        {
+ 436   2            Grid[y][x] = 1;
+ 437   2            return 1;
+ 438   2        }
+ 439   1        //uart_transmit('F');
+ 440   1        return 0;
+ 441   1      }
+ 442           void Reset(char Grid[3][3]) //use to reset the board by clearing all the LED’s and writing 2’s to our boa
+             -rd
+ 443           {
+ 444   1        char i, j;
+ 445   1        upleftLED = 1;
+ 446   1        upmidLED = 1;
+ 447   1        uprightLED = 1;
+ 448   1        midleftLED = 1;
+ 449   1        midmidLED = 1;
+ 450   1        midrightLED = 1;
+ 451   1        downleftLED = 1;
+ 452   1        downmidLED = 1;
+ 453   1        downrightLED = 1;
+ 454   1        for (i = 0; i < 3; i++)
+ 455   1        {
+ 456   2          for (j=0; j<3; j++)
+ 457   2            Grid[i][j] = 2;
+ 458   2        }
+ 459   1       }
+ 460           void Flash(char Grid[3][3])//used to represent the second player input
+ 461           {                                        //as flashing LEDs
+ 462   1          if(Grid[0][0] == 1)
+ 463   1            upleftLED = 1;
+ 464   1          if(Grid[0][1] == 1)
+ 465   1            upmidLED = 1;
+ 466   1          if(Grid[0][2] == 1)
+ 467   1            uprightLED = 1;
+ 468   1          if(Grid[1][0] == 1)
+ 469   1            midleftLED = 1;
+ 470   1          if(Grid[1][1] == 1)
+ 471   1            midmidLED = 1;
+ 472   1          if(Grid[1][2] == 1)
+ 473   1            midrightLED = 1;
+ 474   1          if(Grid[2][0] == 1)
+ 475   1            downleftLED = 1;
+ 476   1          if(Grid[2][1] == 1)
+ 477   1            downmidLED = 1;
+ 478   1          if(Grid[2][2] == 1)
+ 479   1            downrightLED = 1;
+ 480   1          //delay
+ 481   1          Delay();
+ 482   1          
+ 483   1          if(Grid[0][0] == 1)
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 9   
+
+ 484   1            upleftLED = 0;
+ 485   1          if(Grid[0][1] == 1)
+ 486   1            upmidLED = 0;
+ 487   1          if(Grid[0][2] == 1)
+ 488   1            uprightLED = 0;
+ 489   1          if(Grid[1][0] == 1)
+ 490   1            midleftLED = 0;
+ 491   1          if(Grid[1][1] == 1)
+ 492   1            midmidLED = 0;
+ 493   1          if(Grid[1][2] == 1)
+ 494   1            midrightLED = 0;
+ 495   1          if(Grid[2][0] == 1)
+ 496   1            downleftLED = 0;
+ 497   1          if(Grid[2][1] == 1)
+ 498   1            downmidLED = 0;
+ 499   1          if(Grid[2][2] == 1)
+ 500   1            downrightLED = 0;
+ 501   1          Delay();
+ 502   1       }
+ 503          
+ 504            void GetInputTimed(char Grid[3][3]) /* used to time the player in HardTimed mode if the player doesn't m
+             -ake a move in the allowed time this function will skip the player's input for the round*/
+ 505          {
+ 506   1         int w = 0;
+ 507   1         TF0 = 1;
+ 508   1         while(!GetInput(Grid))
+ 509   1         {
+ 510   2           Flash(Grid);
+ 511   2           if(TF0 == 1)
+ 512   2           {
+ 513   3             set(); //sets up the timer
+ 514   3             w++;
+ 515   3           }
+ 516   2           if(w == 50)
+ 517   2             break;
+ 518   2         }
+ 519   1        TR0 = 0;
+ 520   1      }
+ 521          
+ 522           char endCondition (char Grid[3][3]) /*this is used to check who won the tic-tac-toe game, if the game is 
+             -still going on, if there’s a tie etc */
+ 523          {
+ 524   1          if ((Grid[0][0] == 0 && Grid[0][1] == 0 && Grid[0][2] == 0) ||
+ 525   1             (Grid[1][0] == 0 && Grid[1][1] == 0 && Grid[1][2] == 0) ||
+ 526   1             (Grid[2][0] == 0 && Grid[2][1] == 0 && Grid[2][2] == 0) ||
+ 527   1             (Grid[0][0] == 0 && Grid[1][0] == 0 && Grid[2][0] == 0) ||
+ 528   1             (Grid[0][1] == 0 && Grid[1][1] == 0 && Grid[2][1] == 0) ||
+ 529   1             (Grid[0][2] == 0 && Grid[1][2] == 0 && Grid[2][2] == 0) ||
+ 530   1               (Grid[0][0] == 0 && Grid[1][1] == 0 && Grid[2][2] == 0) ||
+ 531   1               (Grid[0][2] == 0 && Grid[1][1] == 0 && Grid[2][0] == 0))
+ 532   1              return 1; //player won
+ 533   1          else if ((Grid[0][0] == 1 && Grid[0][1] == 1 && Grid[0][2] == 1) ||
+ 534   1             (Grid[1][0] == 1 && Grid[1][1] == 1 && Grid[1][2] == 1) ||
+ 535   1             (Grid[2][0] == 1 && Grid[2][1] == 1 && Grid[2][2] == 1) ||
+ 536   1             (Grid[0][0] == 1 && Grid[1][0] == 1 && Grid[2][0] == 1) ||
+ 537   1             (Grid[0][1] == 1 && Grid[1][1] == 1 && Grid[2][1] == 1) ||
+ 538   1             (Grid[0][2] == 1 && Grid[1][2] == 1 && Grid[2][2] == 1) ||
+ 539   1               (Grid[0][0] == 1 && Grid[1][1] == 1 && Grid[2][2] == 1) ||
+ 540   1               (Grid[0][2] == 1 && Grid[1][1] == 1 && Grid[2][0] == 1))
+ 541   1               return 2; //ai won
+ 542   1          else if (Grid[0][0] != 2 && Grid[0][1] != 2 && Grid[0][2] != 2 &&
+ 543   1               Grid[1][0] != 2 && Grid[1][1] != 2 && Grid[1][2] != 2 &&
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 10  
+
+ 544   1               Grid[2][0] != 2 && Grid[2][1] != 2 && Grid[2][2] != 2)
+ 545   1              return 3; //tie
+ 546   1            else
+ 547   1              return 0; //error
+ 548   1      }
+ 549          
+ 550          char TickTackToeHard(char Grid[3][3]) //in this function 0 represents players 0's
+ 551          {                 //1's represents the ai's X's and 2's are empty spaces
+ 552   1         while(!GetInput(Grid)); //1st move
+ 553   1         if(Grid[1][1] == 2) //2nd move
+ 554   1           Grid[1][1] = 1;
+ 555   1         else
+ 556   1           Grid[0][0] = 1;
+ 557   1      
+ 558   1         while(!GetInput(Grid)) //3rd move
+ 559   1           Flash(Grid);
+ 560   1      
+ 561   1        if(!Defend(Grid))//4th move
+ 562   1       {
+ 563   2        if(Grid[1][1] == 1)
+ 564   2        {
+ 565   3        if(Grid[1][0] == 2)
+ 566   3          Grid[1][0] = 1;
+ 567   3        else if(Grid[1][2] == 2)
+ 568   3          Grid[1][2] = 1;
+ 569   3        else
+ 570   3          Grid[0][1] = 1;
+ 571   3        }
+ 572   2        else setup(Grid);
+ 573   2       }
+ 574   1        while(!GetInput(Grid)) //5th move
+ 575   1          Flash(Grid);
+ 576   1         if(endCondition(Grid) != 0) //checks to see if by this point the player has won the game
+ 577   1          return endCondition(Grid);
+ 578   1         while(1)
+ 579   1         {
+ 580   2          if(winingmove(Grid)); //if there is a winning move the AI takes it
+ 581   2          else if(Defend(Grid)); //if there is not a winning move the AI looks to see if it has to defend
+ 582   2          else if (setup(Grid)); //if there is no point to defend the AI will try to set up a winning move
+ 583   2          else
+ 584   2            GoRand(Grid, 1); //if there is no setup move the AI will move randomly
+ 585   2          
+ 586   2          if(endCondition(Grid) != 0)  //checks to see if the game is still going on
+ 587   2              return endCondition(Grid); //if the game isn't still going on it returns who won
+ 588   2          
+ 589   2          while(!GetInput(Grid)) //getting player input and flashing grid while waiting
+ 590   2              Flash(Grid);
+ 591   2      
+ 592   2          if(endCondition(Grid) != 0) //checks to see if the player won
+ 593   2              return endCondition(Grid); //if the game isn’t still going on it returns who won
+ 594   2         }
+ 595   1      }
+ 596          
+ 597          char TickTackToeHardTimed(char Grid[3][3]) //in this function 0 represents players 0's
+ 598          {                 //1's represents the ai's X's and 2's are empty spaces       
+ 599   1         GetInputTimed(Grid);
+ 600   1         if(Grid[1][1] == 2) //2nd move
+ 601   1           Grid[1][1] = 1;
+ 602   1         else
+ 603   1           Grid[0][0] = 1;
+ 604   1         GetInputTimed(Grid); //3rd move
+ 605   1         
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 11  
+
+ 606   1         if(!Defend(Grid))//4th move
+ 607   1       {
+ 608   2        if(Grid[1][1] == 1)
+ 609   2        {
+ 610   3        if(Grid[1][0] == 2)
+ 611   3          Grid[1][0] = 1;
+ 612   3        else if(Grid[1][2] == 2)
+ 613   3          Grid[1][2] = 1;
+ 614   3        else
+ 615   3          Grid[0][1] = 1;
+ 616   3        }
+ 617   2        else setup(Grid);
+ 618   2       }   
+ 619   1      
+ 620   1         GetInputTimed(Grid);
+ 621   1         if(endCondition(Grid) != 0)
+ 622   1          return endCondition(Grid);
+ 623   1         while(1)
+ 624   1         {
+ 625   2          if(winingmove(Grid));
+ 626   2          else if(Defend(Grid));
+ 627   2          else if (setup(Grid));
+ 628   2          else
+ 629   2            GoRand(Grid, 1);
+ 630   2          
+ 631   2          if(endCondition(Grid) != 0)
+ 632   2              return endCondition(Grid);
+ 633   2          
+ 634   2          GetInputTimed(Grid);
+ 635   2          if(endCondition(Grid) != 0) //checks to see if the game is still going on
+ 636   2              return endCondition(Grid); //if the game isnt going on returns who 
+ 637   2         }
+ 638   1      }
+ 639          
+ 640          
+ 641          char TickTackToeMed(char Grid[3][3]) //this difficulty adds blocking while placing randomly
+ 642          {
+ 643   1       while(endCondition(Grid) == 0) //if no one has won
+ 644   1       {
+ 645   2         while(!GetInput(Grid))       //player input
+ 646   2           Flash(Grid);  //flashing grid to show ai moves while player is choosing input
+ 647   2         if (endCondition(Grid) == 0) //if the player didn't win with his play
+ 648   2         {
+ 649   3           if(Defend(Grid)); //checks to see if there is a point to defend 
+ 650   3           else GoRand(Grid, 1); //if there is no point to defend the AI picks a random empty spot
+ 651   3         }
+ 652   2       }  
+ 653   1       return endCondition(Grid);//at this point the game is over and the function returns who won
+ 654   1      }
+ 655          
+ 656          char TickTackToeEasy(char Grid[3][3])//just places randomly on the board
+ 657          {
+ 658   1       while(endCondition(Grid) == 0)
+ 659   1       {
+ 660   2         Flash(Grid);
+ 661   2         while(!GetInput(Grid))  //player goes
+ 662   2           Flash(Grid);
+ 663   2         if (!endCondition(Grid)) //ai goes
+ 664   2           GoRand(Grid, 1);
+ 665   2        }
+ 666   1        return (endCondition(Grid));
+ 667   1      }
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 12  
+
+ 668          
+ 669          char TickTackToe2(char Grid[3][3]) //used for 2 human players
+ 670          {
+ 671   1        while (endCondition(Grid) == 0)
+ 672   1        {
+ 673   2          while(!GetInput(Grid)) //getting player 1 input
+ 674   2            Flash(Grid); //flashing grid to show player 2 moves
+ 675   2          if(!endCondition(Grid))
+ 676   2          {
+ 677   3            while(!Get2PlayerInput(Grid)) //getting player 2 input
+ 678   3              Flash(Grid);
+ 679   3          }
+ 680   2        }
+ 681   1        return endCondition(Grid);
+ 682   1      }
+ 683          
+ 684          void play(const char mode) //this is used to represent when a mode has been changed, higher difficulties h
+             -ave higher frequencies.
+ 685          {
+ 686   1        char i;
+ 687   1        TR0 = 0;
+ 688   1        TF0 = 0;
+ 689   1        TMOD = 0x01;
+ 690   1        if (mode == 0)
+ 691   1        {
+ 692   2          highPreload = 0xf3; //600 hertz frequency
+ 693   2          lowPreload = 0xff;
+ 694   2        }
+ 695   1        else if (mode == 1)
+ 696   1        {
+ 697   2          highPreload = 0xf5; //700 hertz frequency
+ 698   2          lowPreload = 0xb6;
+ 699   2        }
+ 700   1        else if (mode == 2)
+ 701   1        {
+ 702   2          highPreload = 0xf6; //800 hertz frequency
+ 703   2          lowPreload = 0xff;
+ 704   2        }
+ 705   1        else if (mode == 3)
+ 706   1        {    
+ 707   2          highPreload = 0xf8; //1000 hertz frequency
+ 708   2          lowPreload = 0xcc;
+ 709   2        }
+ 710   1        else if (mode == 4)
+ 711   1        {
+ 712   2          highPreload = 0xf9;  //1200 hertz frequency
+ 713   2          lowPreload = 0xff;
+ 714   2        }
+ 715   1          
+ 716   1          for (i = 0; i < 120; i++)
+ 717   1        {
+ 718   2          TR0 = 0;
+ 719   2          TF0 = 0;
+ 720   2          TH0 = highPreload;
+ 721   2            TL0 = lowPreload;
+ 722   2            TR0=1;
+ 723   2            while(TF0==0);
+ 724   2          sound = ~sound;
+ 725   2         }
+ 726   1      }
+ 727          
+ 728          
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 13  
+
+ 729          void Song(const char whoWon)//used to play a song corresponding to who won the game
+ 730          
+ 731          {
+ 732   1          unsigned int i;
+ 733   1          unsigned char x;
+ 734   1          unsigned char song_low[]={0x56,0x85,0x8F,0x56,0x8F,0x85};   //The lower byte of notes for the winning 
+             -song
+ 735   1          unsigned char song_high[]={0xE4,0xED,0xEF,0xE4,0xEF,0xEF};   //The higher byte of notes of the winning
+             - song
+ 736   1      
+ 737   1         if(whoWon == 2)
+ 738   1          {
+ 739   2          // The losing song
+ 740   2              song_low[0] = 0x85;
+ 741   2              song_low[1] = 0x85;
+ 742   2              song_low[2] = 0x5A;
+ 743   2              song_low[3] = 0x5A;
+ 744   2              song_low[4] = 0x56;
+ 745   2              song_low[5] = 0x56;
+ 746   2      
+ 747   2              song_high[0] = 0xED;
+ 748   2              song_high[1] = 0xED;
+ 749   2              song_high[2] = 0xE7;
+ 750   2              song_high[3] = 0xE7;
+ 751   2              song_high[4] = 0xE4;
+ 752   2              song_high[5] = 0xE4;
+ 753   2           }
+ 754   1           if(whoWon == 3)
+ 755   1          {
+ 756   2              //The song played for a tie
+ 757   2              song_low[0] = 0x8F;
+ 758   2              song_low[1] = 0x57;
+ 759   2              song_low[2] = 0x8F;
+ 760   2              song_low[3] = 0x57;
+ 761   2              song_low[4] = 0x8F;
+ 762   2              song_low[5] = 0x57;
+ 763   2      
+ 764   2              song_high[0] = 0xEF;
+ 765   2              song_high[1] = 0xF1;
+ 766   2              song_high[2] = 0xEF;
+ 767   2              song_high[3] = 0xF1;
+ 768   2              song_high[4] = 0xEF;
+ 769   2              song_high[5] = 0xF1;
+ 770   2           }
+ 771   1          TMOD=0x01;
+ 772   1          for(x=0;x<5;x++)    //used to play each note is the songs.  Since it is used for all the songs the son
+             -gs lengths have to be the same
+ 773   1          {
+ 774   2              for(i=0;i<250;i++)    //the delay for the notes note set to a specific amount of time
+ 775   2              {
+ 776   3                  TR0=0;
+ 777   3                  TF0=0;
+ 778   3                  TH0 = song_high[x];     //setting timer 0 high byte to notes high byte byte
+ 779   3                  TL0 = song_low[x];	//setting timer 0 high byte to notes low byte
+ 780   3                  TR0=1;
+ 781   3                  while(TF0==0);
+ 782   3                  sound = ~sound;
+ 783   3              }
+ 784   2          }   
+ 785   1      }
+ 786          void score(char num_of_wins) //used for writing to the 7 segment display based off player wins
+ 787          {    
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 14  
+
+ 788   1      
+ 789   1          //display data setup
+ 790   1          char display[]={0,0,0,0,0,0,0};
+ 791   1      
+ 792   1          //turn the clk low on the flip-flop chip
+ 793   1          Chip_enable = 0;
+ 794   1      
+ 795   1       //sets display equal to the number of wins - number of loses
+ 796   1          if (num_of_wins == 0)  
+ 797   1              {
+ 798   2              display[0]=0;
+ 799   2              display[1]=0;
+ 800   2              display[2]=0;
+ 801   2              display[3]=0;
+ 802   2              display[4]=0;
+ 803   2              display[5]=0;
+ 804   2              display[6]=1;
+ 805   2              }
+ 806   1          else if (num_of_wins == 1)
+ 807   1              {
+ 808   2              display[0]=1;
+ 809   2              display[1]=0;
+ 810   2              display[2]=0;
+ 811   2              display[3]=1;
+ 812   2              display[4]=1;
+ 813   2              display[5]=1;
+ 814   2              display[6]=1;
+ 815   2              }
+ 816   1          else if (num_of_wins == 2)
+ 817   1              {
+ 818   2              display[0]=0;
+ 819   2              display[1]=1;
+ 820   2              display[2]=0;
+ 821   2              display[3]=0;
+ 822   2              display[4]=0;
+ 823   2              display[5]=1;
+ 824   2              display[6]=0;
+ 825   2              }
+ 826   1          else if (num_of_wins == 3)
+ 827   1              {
+ 828   2              display[0]=0;
+ 829   2              display[1]=0;
+ 830   2              display[2]=0;
+ 831   2              display[3]=0;
+ 832   2              display[4]=1;
+ 833   2              display[5]=1;
+ 834   2              display[6]=0;
+ 835   2              }
+ 836   1          else if (num_of_wins == 4)
+ 837   1              {
+ 838   2              display[0]=1;
+ 839   2              display[1]=0;
+ 840   2              display[2]=0;
+ 841   2              display[3]=1;
+ 842   2              display[4]=1;
+ 843   2              display[5]=0;
+ 844   2              display[6]=0;
+ 845   2              }
+ 846   1          else if (num_of_wins == 5)
+ 847   1              {
+ 848   2              display[0]=0;
+ 849   2              display[1]=0;
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 15  
+
+ 850   2              display[2]=1;
+ 851   2              display[3]=0;
+ 852   2              display[4]=1;
+ 853   2              display[5]=0;
+ 854   2              display[6]=0;
+ 855   2              }
+ 856   1          else if (num_of_wins == 6)
+ 857   1              {
+ 858   2              display[0]=0;
+ 859   2              display[1]=0;
+ 860   2              display[2]=1;
+ 861   2              display[3]=0;
+ 862   2              display[4]=0;
+ 863   2              display[5]=0;
+ 864   2              display[6]=0;
+ 865   2              }
+ 866   1          else if (num_of_wins == 7)
+ 867   1              {
+ 868   2              display[0]=0;
+ 869   2              display[1]=0;
+ 870   2              display[2]=0;
+ 871   2              display[3]=1;
+ 872   2              display[4]=1;
+ 873   2              display[5]=1;
+ 874   2              display[6]=1;
+ 875   2              }
+ 876   1          else if (num_of_wins == 8)
+ 877   1              {
+ 878   2              display[0]=0;
+ 879   2              display[1]=0;
+ 880   2              display[2]=0;
+ 881   2              display[3]=0;
+ 882   2              display[4]=0;
+ 883   2              display[5]=0;
+ 884   2              display[6]=0;
+ 885   2              }
+ 886   1          else if (num_of_wins == 9)
+ 887   1              {
+ 888   2              display[0]=0;
+ 889   2              display[1]=0;
+ 890   2              display[2]=0;
+ 891   2              display[3]=0;
+ 892   2              display[4]=1;
+ 893   2              display[5]=0;
+ 894   2              display[6]=0;
+ 895   2              }
+ 896   1          else
+ 897   1          {
+ 898   2            display[0]=1;
+ 899   2            display[1]=0;
+ 900   2            display[2]=0;
+ 901   2            display[3]=0;
+ 902   2            display[4]=0;
+ 903   2            display[5]=0;
+ 904   2            display[6]=1;
+ 905   2          }
+ 906   1          
+ 907   1      //set the displays segments with corresponding port
+ 908   1          upleftLED = display[0];
+ 909   1          upmidLED = display[1];
+ 910   1          uprightLED = display[2];
+ 911   1          midleftLED =  display[3];
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 16  
+
+ 912   1          midmidLED =  display[4];
+ 913   1          midrightLED =  display[5];
+ 914   1          downleftLED =   display[6];
+ 915   1          Chip_enable = 1;   //.rising clk input writes allows the data to be written to the flip-flop
+ 916   1      }
+ 917          
+ 918          void main (void)
+ 919          {
+ 920   1        code char Easy[] = {'E', 'a', 's', 'y', ' ', 'D', 'i', 'f','f','i','c','u','l','t','y'};
+ 921   1        code char Med[] = {'M', 'e', 'd','i','u','m', ' ', 'D', 'i', 'f','f','i','c','u','l','t','y'};
+ 922   1        code char Hard[] = {'H', 'a', 'r', 'd', ' ' , 'D', 'i', 'f','f','i','c','u','l','t','y'};
+ 923   1        code char TwoPlayer[] = {'2',' ','P','l','a','y','e','r',' ','M','o','d','e'};
+ 924   1        code char HardSpeed[] = {'H', 'a', 'r', 'd', ' ', 'S', 'p', 'e', 'e', 'd'};
+ 925   1        char Grid[3][3] = {2}; // Grid used as ticktacktoe board, initialized as empty spaces, Grid[y][x]
+ 926   1        char i;//iterator used for loop
+ 927   1        bit played = 0; //bit to tell if player has just played a game and if score should be updated
+ 928   1        char whoWon; //character that stores which player won
+ 929   1        char num_of_wins = 0; //stores the amount of time human player has won 
+ 930   1      
+ 931   1        P2M1 = 0x00;
+ 932   1        P1M1 = 0x00;
+ 933   1        P0M1 = 0x00;
+ 934   1        uart_init();
+ 935   1        score(num_of_wins); //updates score to zero wins
+ 936   1        Reset(Grid);
+ 937   1        while(1)
+ 938   1        {
+ 939   2            //add input method to add different modes
+ 940   2          if(upleftINPUT == 0) //playing easy
+ 941   2          {
+ 942   3            for (i = 0; i<15; i++)
+ 943   3                uart_transmit(Easy[i]);		//display’s mode
+ 944   3            uart_transmit('\r');			 //puts cursor at beginning of line
+ 945   3            uart_transmit('\n'); 		//puts cursor one line below
+ 946   3            Reset(Grid); 			//resets the board
+ 947   3            play(0); 				//play the mode changing sound
+ 948   3            while(upleftINPUT == 0);		//check for double input at the beginning
+ 949   3            whoWon = TickTackToeEasy(Grid);
+ 950   3            while((upleftINPUT == 0) || (upmidINPUT == 0) || (uprightINPUT == 0) || (midleftINPUT == 0) || (midm
+             -idINPUT == 0)); 		//check for double input at the end
+ 951   3            played = 1; 			//set to check if the player has played a game fully
+ 952   3          }
+ 953   2          else if(upmidINPUT == 0) //playing medium
+ 954   2          {
+ 955   3            for (i = 0; i<17; i++)
+ 956   3                uart_transmit(Med[i]);
+ 957   3            uart_transmit('\r');
+ 958   3            uart_transmit('\n');
+ 959   3            Reset(Grid);
+ 960   3            play(1);
+ 961   3            while(upmidINPUT == 0);
+ 962   3            whoWon = TickTackToeMed(Grid);
+ 963   3            while((upleftINPUT == 0) || (upmidINPUT == 0) || (uprightINPUT == 0) || (midleftINPUT == 0) || (midm
+             -idINPUT == 0));
+ 964   3            played = 1;
+ 965   3          }
+ 966   2          else if(uprightINPUT == 0) //played hard
+ 967   2          {
+ 968   3            for (i = 0; i<15; i++)
+ 969   3                uart_transmit(Hard[i]);
+ 970   3            uart_transmit('\r');
+ 971   3            uart_transmit('\n');
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 17  
+
+ 972   3            Reset(Grid);
+ 973   3            play(2);
+ 974   3            while(uprightINPUT == 0);
+ 975   3            whoWon = TickTackToeHard(Grid);
+ 976   3                while((upleftINPUT == 0) || (upmidINPUT == 0) || (uprightINPUT == 0) || (midleftINPUT == 0) || (
+             -midmidINPUT == 0));
+ 977   3            played = 1;
+ 978   3          }
+ 979   2          else if (midleftINPUT == 0) //playing 2-player
+ 980   2          {
+ 981   3            for(i = 0; i < 13; i++)
+ 982   3                uart_transmit(TwoPlayer[i]);
+ 983   3            uart_transmit('\r');
+ 984   3            uart_transmit('\n');
+ 985   3            Reset(Grid);
+ 986   3            play(3);
+ 987   3            while(midleftINPUT == 0);
+ 988   3            whoWon = TickTackToe2(Grid);
+ 989   3            while((upleftINPUT == 0) || (upmidINPUT == 0) || (uprightINPUT == 0) || (midleftINPUT == 0) || (midm
+             -idINPUT == 0));
+ 990   3            played = 1;
+ 991   3          }
+ 992   2          else if (midmidINPUT == 0)
+ 993   2          {
+ 994   3            for(i = 0; i < 10; i++)
+ 995   3                   uart_transmit(HardSpeed[i]);
+ 996   3            uart_transmit('\r');
+ 997   3            uart_transmit('\n');
+ 998   3            Reset(Grid);
+ 999   3            play(4);
+1000   3            while(midmidINPUT ==0);
+1001   3            whoWon = TickTackToeHardTimed(Grid);
+1002   3            while((upleftINPUT == 0) || (upmidINPUT == 0) || (uprightINPUT == 0) || (midleftINPUT == 0) || (midm
+             -idINPUT == 0));
+1003   3            played = 1;
+1004   3          }
+1005   2          if(played) //will only display who won if the player has played a game
+1006   2          {
+1007   3            if (whoWon == 1) // player won
+1008   3            {
+1009   4              num_of_wins++;
+1010   4              Song(whoWon);
+1011   4            }
+1012   3            else if (whoWon == 2)
+1013   3            { // ai won
+1014   4              num_of_wins--;
+1015   4              if(num_of_wins < 0)
+1016   4                num_of_wins = 0;
+1017   4              Song(whoWon);
+1018   4            }
+1019   3            else //tie
+1020   3            {
+1021   4              Song(whoWon);
+1022   4            }
+1023   3            played = 0; //player need to play another game for this to be updated
+1024   3            score(num_of_wins);
+1025   3            Reset(Grid);
+1026   3          }
+1027   2        Flash(Grid); //flashing grid while player hasn’t chosen a mode
+1028   2        }
+1029   1      }
+1030          
+C51 COMPILER V6.02  TICTACTOE                                                              05/11/2016 13:28:05 PAGE 18  
+
+1031          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   5000    ----
+   CONSTANT SIZE    =     98    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2      89
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       3
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
